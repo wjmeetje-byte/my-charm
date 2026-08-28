@@ -1,0 +1,11 @@
+# 이미지는 일주일 캐시 — 재방문·공유 유입에서 트래픽을 아낀다
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+# HTML은 캐시하지 않는다 — 카카오 키나 애드핏 키를 고쳤을 때 바로 반영되어야 한다
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
