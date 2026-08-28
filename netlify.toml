@@ -1,3 +1,10 @@
+# 저장소 루트에 두는 파일. Netlify가 이걸 읽어 설정을 적용한다.
+
+[build]
+  # deploy 폴더를 사이트 루트로 삼는다.
+  # (GitHub Upload files로 deploy 폴더째 올리면 저장소에 deploy/ 가 생기므로)
+  publish = "deploy"
+
 # 이미지는 일주일 캐시 — 재방문·공유 유입에서 트래픽을 아낀다
 [[headers]]
   for = "/images/*"
