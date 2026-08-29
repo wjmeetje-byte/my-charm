@@ -181,12 +181,14 @@
   .scroll-hint span{display:inline-block;animation:bob 1.6s ease-in-out infinite;}
   @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
 
+  /* 기본은 "보임". 숨김은 JS가 .pre 를 붙였을 때만 적용된다.
+     반대로 하면(기본 숨김 + JS로 보이기) 스크롤 감지가 안 도는 환경에서
+     결과 본문이 통째로 안 보인다. 콘텐츠 노출을 JS에 의존시키지 않는다. */
   .unfold{
-    opacity:0;transform:translateY(18px);
     transition:opacity .6s ease,transform .6s cubic-bezier(.22,1,.36,1);
     margin-top:14px;
   }
-  .unfold.in{opacity:1;transform:none;}
+  .unfold.pre{opacity:0;transform:translateY(18px);}
   .sec-k{font-size:12.5px;color:var(--accent);font-weight:600;margin-bottom:8px;}
   .sec-t{font-size:17px;font-weight:600;margin:0 0 10px;}
   .sec-b{font-size:15px;line-height:1.8;color:#4a453f;margin:0;}
@@ -616,7 +618,7 @@ function resetState(){
 function show(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  window.scrollTo({top:0, behavior:'instant'});
+  window.scrollTo(0, 0);   // behavior:'instant'는 구형 iOS에서 예외를 던진다
 }
 
 function startQuiz(){
@@ -815,12 +817,25 @@ function shareButtonsHTML(){
 
 /* 스크롤 진입 시 하나씩 펼침 */
 function observeUnfold(){
+  const els = document.querySelectorAll('#res-sections .unfold');
+  if(!els.length || !('IntersectionObserver' in window)) return;   // 그대로 보인 채 둔다
+
+  els.forEach(el=>el.classList.add('pre'));
+
+  let fired = false;
   const io = new IntersectionObserver((entries)=>{
+    fired = true;
     entries.forEach(e=>{
-      if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+      if(e.isIntersecting){ e.target.classList.remove('pre'); io.unobserve(e.target); }
     });
-  }, {threshold:.15});
-  document.querySelectorAll('#res-sections .unfold').forEach(el=>io.observe(el));
+  }, {threshold:0, rootMargin:'0px 0px -60px 0px'});   // threshold를 0으로: 뷰포트보다 긴 카드도 확실히 걸린다
+  els.forEach(el=>io.observe(el));
+
+  /* 안전장치 — 옵저버가 한 번도 안 돌면(인앱 브라우저 등) 전부 보이게 되돌린다.
+     한 번이라도 돌았으면 정상이므로 펼침 효과를 그대로 둔다. */
+  setTimeout(()=>{
+    if(!fired){ io.disconnect(); els.forEach(el=>el.classList.remove('pre')); }
+  }, 1500);
 }
 
 function restart(){
@@ -946,7 +961,10 @@ function mountAd(containerId, unitId, w, h){
 
   /* 공유 링크로 바로 진입 */
   const r = new URLSearchParams(location.search).get('result');
-  if(r && TYPES[r]) showResult(r);
+  if(r && TYPES[r]){
+    try{ showResult(r); }
+    catch(e){ show('screen-start'); }   // 최악의 경우에도 시작 화면은 보이게
+  }
 })();
 
 function track(name, params){
