@@ -15,13 +15,13 @@
 <meta property="og:title" content="나도 모르는 내 매력" />
 <meta property="og:description" content="당신은 모르지만, 사람들은 당신의 이런 매력에 끌립니다." />
 <meta property="og:url" content="https://26080907.netlify.app/" />
-<meta property="og:image" content="https://26080907.netlify.app/images/og.webp" />
+<meta property="og:image" content="https://26080907.netlify.app/images/og.jpg" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="나도 모르는 내 매력" />
 <meta name="twitter:description" content="당신은 모르지만, 사람들은 당신의 이런 매력에 끌립니다." />
-<meta name="twitter:image" content="https://26080907.netlify.app/images/og.webp" />
+<meta name="twitter:image" content="https://26080907.netlify.app/images/og.jpg" />
 <meta name="theme-color" content="#fbf7f2" />
 
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23f0743a'/%3E%3Ccircle cx='16' cy='13' r='5' fill='%23fff'/%3E%3Cpath d='M6 28c0-6 4.5-9 10-9s10 3 10 9z' fill='%23fff'/%3E%3C/svg%3E" />
@@ -856,7 +856,10 @@ function shareKakao(){
       imageWidth:800, imageHeight:800,
       link:{ mobileWebUrl:url, webUrl:url }
     },
-    buttons:[{ title:'나도 테스트하기', link:{ mobileWebUrl:url, webUrl:url } }]
+    /* buttons 배열 대신 buttonTitle을 쓴다.
+       배열 방식은 카드에 버튼이 렌더되지 않는 경우가 있고,
+       버튼이 없으면 사용자가 맨 아래 앱 이름 줄을 눌러 수신설정 페이지로 새어나간다. */
+    buttonTitle: '나도 테스트하기'
   });
   track('share', {ch:'kakao'});
 }
