@@ -853,7 +853,11 @@ function siteOrigin(){
    일부 인앱 브라우저가 쿼리스트링을 흘리는 경우가 있어, 잃어버릴 파라미터 자체를 없앤다.
    ?result= 로 들어오는 예전 링크도 계속 동작한다. */
 function resultUrl(){
-  return result ? `${siteOrigin()}/r/${result.id}` : `${siteOrigin()}/`;
+  /* 공유 링크는 서버 설정이 필요 없는 쿼리 방식을 쓴다. 이건 검증된 경로다.
+     /r/mystery 같은 경로 방식은 Netlify 리다이렉트가 있어야 동작하는데,
+     그게 없으면 링크가 통째로 404가 되어 공유가 죽는다. 아래 진입 로직은
+     /r/ 형태도 계속 인식하므로, 리다이렉트가 확인되면 그때 바꾸면 된다. */
+  return result ? `${siteOrigin()}/?result=${result.id}` : `${siteOrigin()}/`;
 }
 function shareText(){
   return result ? `나는 「${result.name}」이래. "${result.punch}"` : '나도 모르는 내 매력';
