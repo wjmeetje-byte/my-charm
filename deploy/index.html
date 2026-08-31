@@ -395,7 +395,7 @@
     본 테스트는 재미로 보는 콘텐츠이며, 심리학적·의학적 진단이 아닙니다.<br/>
     응답 내용은 브라우저에서만 처리되며 서버로 전송되거나 저장되지 않습니다.
     <div style="margin-top:10px">
-      <a href="privacy.html">개인정보처리방침</a><span class="sep" id="foot-sep">·</span><a id="foot-mail" href="#">문의하기</a>
+      <a href="/privacy.html">개인정보처리방침</a><span class="sep" id="foot-sep">·</span><a id="foot-mail" href="#">문의하기</a>
     </div>
     <div style="margin-top:8px;color:#c5bdb2">© 2026 나도 모르는 내 매력</div>
   </footer>
@@ -742,7 +742,7 @@ function renderResult(d){
   wrap.innerHTML = `<span>${d.emoji}</span><img class="res-img" alt="${d.name} 이미지">`;
   const img = wrap.querySelector('img');
   img.onerror = ()=> img.remove();
-  img.src = `images/${d.id}.webp`;
+  img.src = `/images/${d.id}.webp`;
 
   document.getElementById('res-type').textContent = `${d.emoji} ${d.name}`;
   const punch = document.getElementById('res-punch');
@@ -839,18 +839,21 @@ function observeUnfold(){
 }
 
 function restart(){
-  history.replaceState(null,'',location.pathname);
+  history.replaceState(null,'','/');
   document.documentElement.style.setProperty('--accent','#f0743a');
   resetState();
   show('screen-start');
 }
 
 /* ═══════════ 공유 ═══════════ */
-function baseUrl(){
-  return CONFIG.SITE_URL || (location.origin + location.pathname);
+function siteOrigin(){
+  return (CONFIG.SITE_URL || location.origin).replace(/\/+$/, '');
 }
+/* 공유 링크는 쿼리스트링(?result=)이 아니라 경로(/r/mystery)를 쓴다.
+   일부 인앱 브라우저가 쿼리스트링을 흘리는 경우가 있어, 잃어버릴 파라미터 자체를 없앤다.
+   ?result= 로 들어오는 예전 링크도 계속 동작한다. */
 function resultUrl(){
-  return `${baseUrl()}?result=${result ? result.id : ''}`;
+  return result ? `${siteOrigin()}/r/${result.id}` : `${siteOrigin()}/`;
 }
 function shareText(){
   return result ? `나는 「${result.name}」이래. "${result.punch}"` : '나도 모르는 내 매력';
@@ -867,7 +870,7 @@ function shareKakao(){
     content:{
       title:`나는 「${result.name}」`,
       description:`"${result.punch}"\n너는 어떤 매력이야?`,
-      imageUrl: new URL(`images/${result.id}.webp`, baseUrl()).href,
+      imageUrl: `${siteOrigin()}/images/${result.id}.webp`,
       imageWidth:800, imageHeight:800,
       link:{ mobileWebUrl:url, webUrl:url }
     },
@@ -957,10 +960,11 @@ function mountAd(containerId, unitId, w, h){
   mountAd('ad-banner-main', CONFIG.ADFIT.main, 320, 100);
 
   /* 이미지 미리 받아두기 (결과가 즉시 뜨도록) */
-  Object.keys(TYPES).forEach(id=>{ new Image().src = `images/${id}.webp`; });
+  Object.keys(TYPES).forEach(id=>{ new Image().src = `/images/${id}.webp`; });
 
   /* 공유 링크로 바로 진입 */
-  const r = new URLSearchParams(location.search).get('result');
+  const m = location.pathname.match(/\/r\/([a-z]+)\/?$/i);
+  const r = (new URLSearchParams(location.search).get('result') || (m && m[1]) || '').toLowerCase();
   if(r && TYPES[r]){
     try{ showResult(r); }
     catch(e){ show('screen-start'); }   // 최악의 경우에도 시작 화면은 보이게

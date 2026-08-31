@@ -1,0 +1,7 @@
+  요청된 이미지 경로 (앞 4개):
+    /images/calm.webp
+    /images/fatal.webp
+    /images/magnet.webp
+    /images/twist.webp
+  이미지 요청 총 6건
+  잘못된 경로(/r/images/...) : 0건   <- 0이어야 정상
