@@ -24,7 +24,8 @@
 <meta name="twitter:image" content="https://26080907.netlify.app/images/og.jpg" />
 <meta name="theme-color" content="#fbf7f2" />
 
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23f0743a'/%3E%3Ccircle cx='16' cy='13' r='5' fill='%23fff'/%3E%3Cpath d='M6 28c0-6 4.5-9 10-9s10 3 10 9z' fill='%23fff'/%3E%3C/svg%3E" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -411,6 +412,7 @@ const CONFIG = {
   KAKAO_JS_KEY  : '3e0aa192692bf09e77f291ff30428737',   // Kakao Developers > 앱 키 > JavaScript 키
   GA4_ID        : 'G-BJE4SFQ051',           // 예: 'G-XXXXXXXXXX'
   CONTACT_EMAIL : 'wjmeetje@naver.com',           // 문의용 이메일 — 비우면 푸터에서 문의 링크가 사라집니다
+  KAKAO_TEMPLATE_ID : 0,        // 카카오 메시지 템플릿 ID (숫자). 0이면 기본 템플릿으로 동작
   ADFIT : {                     // 애드핏 광고단위 'DAN-XXXXXXXXXXXX'
     main   : 'DAN-MwGc6GsOdRpc46MH',    // 시작 화면 하단   320×100
     middle : '',                        // 결과 03↔04 사이  320×100  (이번엔 안 씀)
@@ -849,16 +851,16 @@ function restart(){
 function siteOrigin(){
   return (CONFIG.SITE_URL || location.origin).replace(/\/+$/, '');
 }
-/* 공유 링크는 쿼리스트링(?result=)이 아니라 경로(/r/mystery)를 쓴다.
-   일부 인앱 브라우저가 쿼리스트링을 흘리는 경우가 있어, 잃어버릴 파라미터 자체를 없앤다.
-   ?result= 로 들어오는 예전 링크도 계속 동작한다. */
-function resultUrl(){
-  /* 공유 링크는 쿼리(?result=)가 아니라 경로(/r/mystery)를 쓴다.
-     카카오·인앱 브라우저가 링크의 '?' 뒤를 떼어내면 시작 화면만 열리고
-     결과가 안 보이는데, 경로 방식은 떼어갈 파라미터 자체가 없다.
-     deploy/_redirects 의 "/r/*  /index.html  200" 규칙이 이걸 받쳐준다.
-     ?result= 로 들어오는 예전 링크도 아래 진입 로직에서 계속 인식한다. */
-  return result ? `${siteOrigin()}/r/${result.id}` : `${siteOrigin()}/`;
+/* 공유 링크 구조
+     경로  /r/mystery                  <- 결과 식별자. 반드시 살아남아야 하는 정보
+     쿼리  ?utm_source=kakao&...       <- 유입 추적. 없어져도 결과에는 지장 없음
+   인앱 브라우저가 '?' 뒤를 떼어내도 결과는 그대로 뜨고 UTM만 사라진다.
+   deploy/_redirects 의 "/r/*  /index.html  200" 규칙이 경로 방식을 받쳐준다.
+   ?result= 로 들어오는 예전 링크도 진입 로직에서 계속 인식한다. */
+function resultUrl(ch){
+  const base = result ? `${siteOrigin()}/r/${result.id}` : `${siteOrigin()}/`;
+  if(!ch) return base;
+  return `${base}?utm_source=${ch}&utm_medium=share&utm_campaign=result`;
 }
 function shareText(){
   return result ? `나는 「${result.name}」이래. "${result.punch}"` : '나도 모르는 내 매력';
@@ -869,37 +871,52 @@ function shareKakao(){
     copyLink('카카오 공유 준비 중이라 링크를 복사했어요.');
     return;
   }
-  const url = resultUrl();
-  Kakao.Share.sendDefault({
-    objectType:'feed',
-    content:{
-      title:`나는 「${result.name}」`,
-      description:`"${result.punch}"\n너는 어떤 매력이야?`,
-      imageUrl: `${siteOrigin()}/images/${result.id}.webp`,
-      imageWidth:800, imageHeight:800,
-      link:{ mobileWebUrl:url, webUrl:url }
-    },
-    /* buttons 배열 대신 buttonTitle을 쓴다.
-       배열 방식은 카드에 버튼이 렌더되지 않는 경우가 있고,
-       버튼이 없으면 사용자가 맨 아래 앱 이름 줄을 눌러 수신설정 페이지로 새어나간다. */
-    buttonTitle: '나도 테스트하기'
-  });
+  const url = resultUrl('kakao');
+
+  /* 카카오 기본 템플릿은 버튼을 렌더하지 않는다(buttonTitle을 줘도 안 나온다).
+     버튼을 확실히 띄우려면 개발자 콘솔의 메시지 템플릿을 만들어 sendCustom을 써야 한다.
+     템플릿 ID가 설정되기 전에는 기존 방식으로 그대로 동작한다. */
+  if(CONFIG.KAKAO_TEMPLATE_ID){
+    Kakao.Share.sendCustom({
+      templateId: Number(CONFIG.KAKAO_TEMPLATE_ID),
+      templateArgs: {
+        TYPE  : result.id,                                   // 링크 경로에 꽂힌다 → /r/${TYPE}
+        TITLE : `나는 「${result.name}」`,
+        DESC  : `"${result.punch}"
+너는 어떤 매력이야?`,
+        IMG   : `${siteOrigin()}/images/${result.id}.webp`
+      }
+    });
+  } else {
+    Kakao.Share.sendDefault({
+      objectType:'feed',
+      content:{
+        title:`나는 「${result.name}」`,
+        description:`"${result.punch}"
+너는 어떤 매력이야?`,
+        imageUrl: `${siteOrigin()}/images/${result.id}.webp`,
+        imageWidth:800, imageHeight:800,
+        link:{ mobileWebUrl:url, webUrl:url }
+      },
+      buttonTitle: '나도 테스트하기'
+    });
+  }
   track('share', {ch:'kakao'});
 }
 function shareTwitter(){
-  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText())}&url=${encodeURIComponent(resultUrl())}`,'_blank','noopener');
+  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText())}&url=${encodeURIComponent(resultUrl('twitter'))}`,'_blank','noopener');
   track('share', {ch:'twitter'});
 }
 function shareNaver(){
-  window.open(`https://share.naver.com/web/shareView?url=${encodeURIComponent(resultUrl())}&title=${encodeURIComponent(shareText())}`,'_blank','noopener');
+  window.open(`https://share.naver.com/web/shareView?url=${encodeURIComponent(resultUrl('naver'))}&title=${encodeURIComponent(shareText())}`,'_blank','noopener');
   track('share', {ch:'naver'});
 }
 function shareFacebook(){
-  window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(resultUrl())}`,'_blank','noopener');
+  window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(resultUrl('facebook'))}`,'_blank','noopener');
   track('share', {ch:'facebook'});
 }
 function copyLink(msg){
-  const url = resultUrl();
+  const url = resultUrl('copy');
   const done = ()=> alert(msg || '링크를 복사했어요!');
   if(navigator.clipboard){
     navigator.clipboard.writeText(url).then(done).catch(()=>prompt('아래 주소를 복사해 주세요', url));
