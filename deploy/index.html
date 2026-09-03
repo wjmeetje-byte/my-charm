@@ -381,6 +381,10 @@
 
     <p class="scroll-hint">더 자세한 분석이 남아 있어요 <span>↓</span></p>
 
+    <!-- 결과 상단 광고. 결과에 도달한 사람 대부분이 보는 자리다.
+         공유 버튼 바로 밑이 아니라 스크롤 힌트 아래에 둔다 — 오클릭 유도로 보이면 애드핏 정책에 걸린다. -->
+    <div class="ad-banner" id="ad-banner-top"></div>
+
     <!-- 2층: 펼침 -->
     <div id="res-sections"></div>
 
@@ -413,10 +417,13 @@ const CONFIG = {
   GA4_ID        : 'G-BJE4SFQ051',           // 예: 'G-XXXXXXXXXX'
   CONTACT_EMAIL : 'wjmeetje@naver.com',           // 문의용 이메일 — 비우면 푸터에서 문의 링크가 사라집니다
   KAKAO_TEMPLATE_ID : 136830,   // 카카오 메시지 템플릿 ID. 0이면 기본 템플릿으로 동작
-  ADFIT : {                     // 애드핏 광고단위 'DAN-XXXXXXXXXXXX'
-    main   : 'DAN-MwGc6GsOdRpc46MH',    // 시작 화면 하단   320×100
-    middle : '',                        // 결과 03↔04 사이  320×100  (이번엔 안 씀)
-    bottom : 'DAN-KwaFtrZmcCzuu6Js'     // 결과 최하단      320×50
+  ADFIT : {
+    /* 자리마다 { unit, w, h }. 애드핏에서 만든 광고단위 크기를 그대로 적어두면 된다.
+       unit이 비어 있으면 그 자리는 화면에 나타나지 않는다. */
+    main   : { unit:'DAN-MwGc6GsOdRpc46MH', w:320, h:100 },  // 시작 화면 하단 — 방문자 100%가 봄
+    top    : { unit:'DAN-qkRAsXwRJrTbJt5B', w:320, h:100 },  // 결과 상단 - 결과 도달자 대부분이 봄. 큰 배너
+    middle : { unit:'DAN-KwaFtrZmcCzuu6Js', w:320, h:50  },  // 결과 본문 03-04 사이  // 결과 본문 03↔04 사이 ← 320×100 유닛 추가하면 여기
+    bottom : { unit:'',                     w:320, h:50  }   // 결과 최하단 — 지금은 안 씀
   }
 };
 
@@ -731,8 +738,9 @@ function showResult(typeId){
   track('result_view', {type: id});
   show('screen-result');
   observeUnfold();
-  mountAd('ad-banner-middle', CONFIG.ADFIT.middle, 320, 100);
-  mountAd('ad-banner-bottom', CONFIG.ADFIT.bottom, 320, 50);
+  mountAd('ad-banner-top',    CONFIG.ADFIT.top);
+  mountAd('ad-banner-middle', CONFIG.ADFIT.middle);
+  mountAd('ad-banner-bottom', CONFIG.ADFIT.bottom);
 }
 
 function renderResult(d){
@@ -929,18 +937,18 @@ function copyLink(msg){
 /* ═══════════ 애드핏 ═══════════
    화면이 display:none 상태로 시작하면 애드핏 스크립트가 슬롯을 못 찾습니다.
    그래서 해당 화면이 실제로 보이는 시점에 <ins>를 만들고 스크립트를 다시 붙입니다. */
-function mountAd(containerId, unitId, w, h){
+function mountAd(containerId, slot){
   const box = document.getElementById(containerId);
   if(!box || box.dataset.mounted) return;
-  if(!unitId) return;                    // 키가 아직 없으면 아무것도 하지 않는다 (빈 칸이 안 생김)
-  box.style.minHeight = h + 'px';        // 키가 있으면 자리를 미리 잡아둔다 (광고가 뜰 때 화면이 밀리지 않게)
+  if(!slot || !slot.unit) return;         // 유닛이 없으면 자리를 만들지 않는다 (빈 칸이 안 생김)
+  box.style.minHeight = slot.h + 'px';    // 광고가 뜰 때 화면이 아래로 밀리지 않게 자리를 미리 잡는다
   box.dataset.mounted = '1';
   const ins = document.createElement('ins');
   ins.className = 'kakao_ad_area';
   ins.style.display = 'none';
-  ins.setAttribute('data-ad-unit', unitId);
-  ins.setAttribute('data-ad-width', w);
-  ins.setAttribute('data-ad-height', h);
+  ins.setAttribute('data-ad-unit', slot.unit);
+  ins.setAttribute('data-ad-width', slot.w);
+  ins.setAttribute('data-ad-height', slot.h);
   box.appendChild(ins);
   const s = document.createElement('script');
   s.async = true;
@@ -979,7 +987,7 @@ function mountAd(containerId, unitId, w, h){
     document.getElementById('foot-sep').remove();
   }
 
-  mountAd('ad-banner-main', CONFIG.ADFIT.main, 320, 100);
+  mountAd('ad-banner-main', CONFIG.ADFIT.main);
 
   /* 이미지 미리 받아두기 (결과가 즉시 뜨도록) */
   Object.keys(TYPES).forEach(id=>{ new Image().src = `/images/${id}.webp`; });
